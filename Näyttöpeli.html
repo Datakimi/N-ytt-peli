@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<style>
+canvas {
+    border:1px solid #d3d3d3;
+    background-color: #33F3FF;
+}
+</style>
+</head>
+<body onload="startGame()">
+<script>
+
+var myObstacles = []; //Esteet
+var myGamePiece; //Pelihahmo
+var myScore; //Score
+
+function startGame() {   //Pelin aloitus funktio
+	myObstacle = new component(10, 10, "yellow", 300, 120); //Esteen koko, väri yms.
+    myGamePiece = new component(80, 110, "työukko2.svg", 4, 370, "image"); //Peli hahmon ulkonäkö
+	myScore = new component("30px", "Consolas", "black", 280, 40, "text"); //Score ja miten se näytetään
+	myGameArea.start(); // aloittaa peli alueen
+}
+
+function accelerate(n) { //Nostaa peli hahmon
+  myGamePiece.gravity = n;
+}
+
+var myGameArea = { //Peli alue
+    canvas : document.createElement("canvas"),//ympäristö
+    start : function() { //aloitus
+        this.canvas.width = 1600; 
+        this.canvas.height = 800; //Alueen pituus ja korkeus
+        this.context = this.canvas.getContext("2d");
+        document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+		this.frameNo = 1; //Framet
+        this.interval = setInterval(updateGameArea, 20);		//Alueen päivitys nopeus
+        window.addEventListener('keydown', function (e) { //Pelinäppäimet
+      myGameArea.keys = (myGameArea.keys || []);
+      myGameArea.keys[e.keyCode] = true;
+    })
+    window.addEventListener('keyup', function (e) {
+      myGameArea.keys[e.keyCode] = false;
+    })
+	 
+  },//
+    clear : function(){ //Tyhjennys funktio
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    },
+	
+		stop : function() { //lopetus funktio
+			clearInterval(this.interval);
+ }
+}
+
+function everyinterval(n) {
+  if ((myGameArea.frameNo / n) % 1 == 0) {return true;}
+  return false;  
+}
+
+function component(width, height, color, x, y, type) { //Komponentit
+	this.type = type;
+	if (type == "image") {
+    this.image = new Image(); //sallii kuvan lisäämisen peliin
+    this.image.src = color;
+  }
+    this.width = width;
+    this.height = height;
+    this.speedX = 0;
+    this.speedY = 0;
+	this.gravity = 0.05; //Painovoima
+	this.gravitySpeed = 0;
+    this.x = x;
+    this.y = y;    
+    this.update = function() {
+        ctx = myGameArea.context;
+		if (this.type == "text") {
+      ctx.font = this.width + " " + this.height;
+      ctx.fillStyle = color;
+      ctx.fillText(this.text, this.x, this.y);
+    } else {
+        ctx.fillStyle = color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+		}
+		if (type == "image") {
+            ctx.drawImage(this.image, 
+                this.x, 
+                this.y,
+                this.width, this.height);
+        } else {
+            ctx.fillStyle = color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+    this.newPos = function() {
+		this.gravitySpeed += this.gravity;
+        this.x += this.speedX;
+        this.y += this.speedY + this.gravitySpeed; 
+		this.hitBottom();
+    }    
+	this.hitBottom = function() { //Mitä tapahtuu kun Hahmo menee maahan
+    var rockbottom = myGameArea.canvas.height - this.height;
+    if (this.y > rockbottom) {
+      this.y = rockbottom;
+    }
+  }
+	this.crashWith = function(otherobj) { //Törmäys
+		var myleft = this.x;
+		var myright = this.x + (this.width);
+		var mytop = this.y;
+		var mybottom = this.y + (this.height);
+		var otherleft = otherobj.x;
+		var otherright = otherobj.x + (otherobj.width);
+		var othertop = otherobj.y;
+		var otherbottom = otherobj.y + (otherobj.height);
+		var crash = true;
+		if ((mybottom < othertop) ||
+		(mytop > otherbottom) ||
+		(myright < otherleft) ||
+		(myleft > otherright)) {
+		crash = false;
+		}
+    return crash;
+  }
+}
+function updateGameArea() { //Alueen päivitys
+	if (myGamePiece.crashWith(myObstacle)) {
+        myGameArea.stop(); // Törmäyksestä peli loppuu
+    } else {
+		var x, y;
+		for (i = 0; i < myObstacles.length; i += 1) {
+		if (myGamePiece.crashWith(myObstacles[i])) {
+		myGameArea.stop();
+      return;
+    }
+}	
+		myGameArea.clear();
+		if (myGameArea.x && myGameArea.y) {
+		myGamePiece.x = myGameArea.x;
+		myGamePiece.y = myGameArea.y;
+	}
+		myGameArea.frameNo += 1; //Framen nopeus
+  if (myGameArea.frameNo == 1 || everyinterval(150)) {
+    x = myGameArea.canvas.width;
+    minHeight = 300;
+    maxHeight = 30;
+    height = Math.floor(Math.random()*(maxHeight-minHeight+1)+minHeight);
+    minGap = 100;
+    maxGap = 500; //esteiden väli
+    gap = Math.floor(Math.random()*(maxGap-minGap+1)+minGap);
+    myObstacles.push(new component(10, height, "red", x, 0));
+    myObstacles.push(new component(10, x - height - gap, "red", x, height + gap));
+  }
+  for (i = 0; i < myObstacles.length; i += 1) {
+    myObstacles[i].x += -1;
+    myObstacles[i].update();
+	}
+	myGamePiece.speedX = 0;
+	myGamePiece.speedY = 0; 		//nopeus
+	if (myGameArea.keys && myGameArea.keys[37]) {myGamePiece.speedX = -6; }
+	if (myGameArea.keys && myGameArea.keys[39]) {myGamePiece.speedX = 6; }
+	if (myGameArea.keys && myGameArea.keys[38]) {myGamePiece.speedY = -6; }
+	if (myGameArea.keys && myGameArea.keys[40]) {myGamePiece.speedY = 6; } //Nuoli näppäimet
+	myGamePiece.newPos();  
+	myGamePiece.update();
+	myScore.text = "SCORE: " + myGameArea.frameNo; //score
+	myScore.update();
+		
+	}
+}
+function moveup() {
+    myGamePiece.speedY -= 1; 
+}
+
+function movedown() {
+    myGamePiece.speedY += 1; 
+}
+
+function moveleft() {
+    myGamePiece.speedX -= 1; 
+}
+
+function moveright() {
+    myGamePiece.speedX += 1; 
+}
+function stopMove() {
+  myGamePiece.speedX = 0;
+  myGamePiece.speedY = 0; 
+}
+
+</script>
+<p>Make sure this window has focus, then you can use the arrow keys on you keyboard to move the red square.</p>
+<button onmousedown="accelerate(-0.2)" onmouseup="accelerate(0.1)">ACCELERATE</button>
+</body>
+</html>
